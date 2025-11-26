@@ -1,0 +1,11 @@
+.venv
+.vscode
+db.sqlite3
+.git
+terraform
+session-manager-plugin.pkg
+nginx
+README.md
+.python-version
+.gitignore
+Makefile
