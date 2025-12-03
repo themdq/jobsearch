@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: django-hourly-task
+  namespace: job-finder
+  labels:
+    app: django-cronjob
+spec:
+  # Каждый час
+  schedule: "0 * * * *"
+  
+  # Часовой пояс (опционально, требует Kubernetes 1.25+)
+  # timeZone: "Europe/Moscow"
+  
+  # Настройки выполнения
+  concurrencyPolicy: Forbid  # Не запускать если предыдущая job еще выполняется
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 300  # Если пропустили время запуска, запустить в течение 5 минут
+  
+  jobTemplate:
+    spec:
+      # Удалять успешные jobs через 1 час
+      ttlSecondsAfterFinished: 3600
+      
+      template:
+        metadata:
+          labels:
+            app: django-cronjob
+        spec:
+          restartPolicy: OnFailure
+          
+          # Ждем PostgreSQL
+          initContainers:
+          - name: wait-for-postgres
+            image: busybox:1.36
+            command: ['sh', '-c', 'until nc -z postgres-service 5432; do echo waiting for postgres; sleep 2; done;']
+          imagePullSecrets:
+          - name: ghcr-secret
+          containers:
+          - name: django-command
+            image: ghcr.io/themdq/jobsearch:latest
+            imagePullPolicy: Always
+            
+            command: ["python", "manage.py", "scrape_jobs"]
+            
+            # Переменные окружения из ConfigMap
+            envFrom:
+            - configMapRef:
+                name: app-env
+            
+            # Переменные окружения из Secrets
+            env:
+            - name: DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_DB
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: DJANGO_SECRET_KEY
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: GOOGLE_API_KEY
+            - name: GOOGLE_CX
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: GOOGLE_CX
+            - name: DATABASE_HOST
+              value: "postgres"
+            
+            resources:
+              requests:
+                memory: "128Mi"
+                cpu: "100m"
+              limits:
+                memory: "256Mi"
+                cpu: "200m"
+
+# Примеры расписаний (cron format):
+# "0 * * * *"      - каждый час в начале часа
+# "*/15 * * * *"   - каждые 15 минут
+# "0 */2 * * *"    - каждые 2 часа
+# "0 9 * * *"      - каждый день в 9:00
+# "0 0 * * 0"      - каждое воскресенье в полночь
+# "0 2 * * 1-5"    - с понедельника по пятницу в 2:00

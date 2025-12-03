@@ -9,6 +9,7 @@ metadata:
     # Автоматический редирект на HTTPS
     traefik.ingress.kubernetes.io/redirect-entry-point: websecure
     traefik.ingress.kubernetes.io/redirect-permanent: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   rules:
   - host: job.malashikh.in
@@ -18,7 +19,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: django-service
+            name: nginx-service
             port:
               number: 80 
   tls:
