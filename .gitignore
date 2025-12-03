@@ -19,3 +19,4 @@ db.sqlite3
 session-manager-plugin.pkg
 variables.tf
 Makefile
+02_secrets.yaml
