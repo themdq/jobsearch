@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: staticfiles-pvc
+  namespace: job-finder
+spec:
+  storageClassName: manual
+  resources:
+    requests:
+      storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  volumeName: staticfiles-pv

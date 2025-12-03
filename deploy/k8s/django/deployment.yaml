@@ -6,7 +6,7 @@ metadata:
   labels:
     app: django
 spec:
-  replicas: 2  # Две реплики для высокой доступности
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -22,6 +22,10 @@ spec:
     spec:
       imagePullSecrets:
       - name: ghcr-secret
+      volumes:
+        - name: staticfiles
+          persistentVolumeClaim:
+            claimName: staticfiles-pvc
       containers:
       - name: django
         image: ghcr.io/themdq/jobsearch:latest
@@ -29,6 +33,10 @@ spec:
 
         command: ["gunicorn"]
         args: ["-w", "3", "-b", "0.0.0.0:8000", "jobsearch.wsgi:application"]
+        
+        volumeMounts:
+          - mountPath: "/efs/staticfiles"
+            name: staticfiles
         
         ports:
         - containerPort: 8000
