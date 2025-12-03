@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-app
+  namespace: job-finder
+  labels:
+    app: django
+spec:
+  replicas: 2  # Две реплики для высокой доступности
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero downtime deployment
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      imagePullSecrets:
+      - name: ghcr-secret
+      containers:
+      - name: django
+        image: ghcr.io/themdq/jobsearch:latest
+        imagePullPolicy: Always
+
+        command: ["gunicorn"]
+        args: ["-w", "3", "-b", "0.0.0.0:8000", "jobsearch.wsgi:application"]
+        
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        
+        # Переменные окружения из ConfigMap
+        envFrom:
+        - configMapRef:
+            name: app-env
+        
+        # Переменные окружения из Secrets
+        env:
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_DB
+        - name: DJANGO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: DJANGO_SECRET_KEY
+        - name: DATABASE_HOST
+          value: "postgres"
+        
+        # Ресурсы
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        # Liveness probe - проверяет, жив ли контейнер
+        livenessProbe:
+          httpGet:
+            path: /ping/
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        # Readiness probe - проверяет, готов ли принимать трафик
+        readinessProbe:
+          httpGet:
+            path: /ping/
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Startup probe - для медленно стартующих приложений
+        startupProbe:
+          httpGet:
+            path: /ping/
+            port: 8000
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+      
+      # Распределение подов по разным нодам (если есть несколько)
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - django
+              topologyKey: kubernetes.io/hostname

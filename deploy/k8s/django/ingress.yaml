@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: django-ingress
+  namespace: job-finder
+  annotations:
+    # Traefik (по умолчанию в k3s)
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    # Автоматический редирект на HTTPS
+    traefik.ingress.kubernetes.io/redirect-entry-point: websecure
+    traefik.ingress.kubernetes.io/redirect-permanent: "true"
+spec:
+  rules:
+  - host: job.malashikh.in
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: django-service
+            port:
+              number: 80 
+  tls:
+  - hosts:
+    - job.malashikh.in
+    secretName: django-tls-secret

@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: django-migrate
+  namespace: job-finder
+spec:
+  template:
+    metadata:
+      labels:
+        app: django-migrate
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+      - name: ghcr-secret
+      containers:
+      - name: migrate
+        image: ghcr.io/themdq/jobsearch:latest
+        command: ["python", "manage.py", "migrate", "--noinput"]
+        
+        # Переменные окружения
+        envFrom:
+        - configMapRef:
+            name: app-env
+        
+        # Переменные окружения из Secrets
+        env:
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_DB
+        - name: DJANGO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: DJANGO_SECRET_KEY
+        - name: DATABASE_HOST
+          value: "postgres"
+  
+  backoffLimit: 3  # Повторить 3 раза при ошибке
