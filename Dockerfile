@@ -35,7 +35,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Create directory for logs
 RUN mkdir -p /app/logs && chown -R nonroot:nonroot /app
-RUN mkdir -p /efs/staticfiles && chown -R nonroot:nonroot /staticfiles
+RUN mkdir -p /efs/staticfiles && chown -R nonroot:nonroot /efs
 
 # Reset the entrypoint, don't invoke `uv`
 ENTRYPOINT []
