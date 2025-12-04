@@ -18,8 +18,7 @@ jobs:
       packages: write
 
     outputs:
-      image_tag: ${{ steps.meta.outputs.version }}
-      image_full: ${{ steps.meta.outputs.tags }}
+      image_tag: ${{ steps.meta.outputs.tags }}
     
     steps:
     - name: Checkout code
@@ -42,7 +41,6 @@ jobs:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
           type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -77,7 +75,7 @@ jobs:
     - name: Update deployment image
       run: |
         kubectl set image deployment/django-app \
-          django=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ env.IMAGE}} \
+          django=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ env.IMAGE }} \
           -n job-finder
         
         kubectl rollout status deployment/django-app -n job-finder --timeout=5m
