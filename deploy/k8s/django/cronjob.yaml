@@ -167,10 +167,18 @@ spec:
           restartPolicy: OnFailure
           imagePullSecrets:
           - name: ghcr-secret
+          volumes:
+            - name: staticfiles
+              persistentVolumeClaim:
+                claimName: staticfiles-pvc
           containers:
           - name: collectstatic
             image: ghcr.io/themdq/jobsearch:latest
             command: ["python", "manage.py", "collectstatic", "--noinput"]
+
+            volumeMounts:
+            - mountPath: "/efs/staticfiles"
+              name: staticfiles
 
             envFrom:
             - configMapRef:
