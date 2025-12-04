@@ -75,7 +75,7 @@ jobs:
     - name: Update deployment image
       run: |
         kubectl set image deployment/django-app \
-          django=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ env.IMAGE }} \
+          django=${{ env.IMAGE }} \
           -n job-finder
         
         kubectl rollout status deployment/django-app -n job-finder --timeout=5m
@@ -86,7 +86,7 @@ jobs:
         kubectl create job django-migrate-${{ github.sha }} \
           --from=cronjob/django-migrate -n job-finder || \
         kubectl run django-migrate-${{ github.sha }} \
-          --image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ env.IMAGE }} \
+          --image=${{ env.IMAGE }} \
           --restart=Never \
           --command -n job-finder \
           -- python manage.py migrate
@@ -97,7 +97,7 @@ jobs:
     - name: Collect static files (optional)
       run: |
         kubectl run collectstatic-${{ github.sha }} \
-          --image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ env.IMAGE }} \
+          --image=${{ env.IMAGE }} \
           --restart=Never \
           --command -n job-finder \
           -- python manage.py collectstatic --noinput
