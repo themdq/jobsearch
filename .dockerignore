@@ -8,4 +8,6 @@ nginx
 README.md
 .python-version
 .gitignore
-Makefile
+Makefile*
+.github
+deploy/k8s

@@ -91,6 +91,114 @@ spec:
               limits:
                 memory: "256Mi"
                 cpu: "200m"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: django-migrate
+  namespace: job-finder
+spec:
+  # фиктивное расписание — чтобы он сам НИКОГДА не запускался
+  schedule: "0 0 31 2 *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        metadata:
+          labels:
+            app: django-migrate
+        spec:
+          restartPolicy: OnFailure
+          imagePullSecrets:
+          - name: ghcr-secret
+          containers:
+          - name: migrate
+            image: ghcr.io/themdq/jobsearch:latest
+            command: ["python", "manage.py", "migrate", "--noinput"]
+
+            envFrom:
+            - configMapRef:
+                name: app-env
+
+            env:
+            - name: DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_DB
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: DJANGO_SECRET_KEY
+            - name: DATABASE_HOST
+              value: "postgres"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: django-collectstatic
+  namespace: job-finder
+spec:
+  # фиктивное расписание — чтобы он сам НИКОГДА не запускался
+  schedule: "0 0 31 2 *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        metadata:
+          labels:
+            app: django-collectstatic
+        spec:
+          restartPolicy: OnFailure
+          imagePullSecrets:
+          - name: ghcr-secret
+          containers:
+          - name: collectstatic
+            image: ghcr.io/themdq/jobsearch:latest
+            command: ["python", "manage.py", "collectstatic", "--noinput"]
+
+            envFrom:
+            - configMapRef:
+                name: app-env
+
+            env:
+            - name: DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_DB
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: django-secrets
+                  key: DJANGO_SECRET_KEY
+            - name: DATABASE_HOST
+              value: "postgres"
 
 # Примеры расписаний (cron format):
 # "0 * * * *"      - каждый час в начале часа

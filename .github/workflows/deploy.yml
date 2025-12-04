@@ -82,26 +82,23 @@ jobs:
 
     - name: Run migrations
       run: |
-        kubectl set image job/django-migrate migrate=${{ env.IMAGE }} -n job-finder
+        kubectl set image cronjob/django-migrate migrate=${{ env.IMAGE }} -n job-finder
 
-        kubectl delete job django-migrate-run -n job-finder --ignore-not-found=true
-
-        kubectl create job django-migrate-run \
-          --from=job/django-migrate \
+        kubectl create job django-migrate-${{ github.sha }} \
+          --from=cronjob/django-migrate \
           -n job-finder
 
-        kubectl wait --for=condition=complete job/django-migrate-run \
+        kubectl wait --for=condition=complete job/django-migrate-${{ github.sha }} \
           -n job-finder --timeout=5m
+
 
     - name: Collect static files
       run: |
-        kubectl set image job/django-collectstatic collectstatic=${{ env.IMAGE }} -n job-finder
+        kubectl set image cronjob/django-collectstatic collectstatic=${{ env.IMAGE }} -n job-finder
 
-        kubectl delete job django-collectstatic-run -n job-finder --ignore-not-found=true
-
-        kubectl create job django-collectstatic-run \
-          --from=job/django-collectstatic \
+        kubectl create job django-collectstatic-${{ github.sha }} \
+          --from=cronjob/django-collectstatic \
           -n job-finder
 
-        kubectl wait --for=condition=complete job/django-collectstatic-run \
+        kubectl wait --for=condition=complete job/django-collectstatic-${{ github.sha }} \
           -n job-finder --timeout=5m
