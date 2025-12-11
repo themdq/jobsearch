@@ -10,13 +10,12 @@ wheels/
 .venv
 deploy/.env
 
-.terraform
-terraform.tfstate
-terraform.tfstate.backup
-.terraform.lock.hcl
+.terraform*
+terraform.tfstate*
 .vscode
 db.sqlite3
 session-manager-plugin.pkg
 variables.tf
 Makefile*
 *secrets.yaml
+.DS_Store
