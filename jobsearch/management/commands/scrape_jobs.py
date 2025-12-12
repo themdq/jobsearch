@@ -29,6 +29,8 @@ class Command(BaseCommand):
                     link = str(res["link"])
                     if "lever" in link:
                         link = "/".join(link.split("/")[:5])
+                    elif "ashbyhq" in link:
+                        link = "/".join(link.split("/")[:5])
 
                     # если уже есть — пропускаем
                     if (
