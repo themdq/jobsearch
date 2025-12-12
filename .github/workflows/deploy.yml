@@ -80,6 +80,8 @@ jobs:
         
         kubectl rollout status deployment/django-app -n job-finder --timeout=5m
 
+        kubectl set image cronjob/django-hourly-task django-command=${{ env.IMAGE }} -n job-finder
+
     - name: Run migrations
       run: |
         kubectl set image cronjob/django-migrate migrate=${{ env.IMAGE }} -n job-finder
