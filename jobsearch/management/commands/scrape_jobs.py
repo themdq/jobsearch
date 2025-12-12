@@ -63,16 +63,19 @@ class Command(BaseCommand):
                         BadJob.objects.create(url=link)
 
                     else:
-                        jp = JobPosting.objects.create(
-                            url=link,
-                            company=company,
-                            title=title or res.get("title") or "",
-                            location=location,
-                            description=description,
-                            source=source,
-                            posted_date=date_posted,
-                        )
-                        found_new.append(jp)
+                        try:
+                            jp = JobPosting.objects.create(
+                                url=link,
+                                company=company,
+                                title=title or res.get("title") or "",
+                                location=location,
+                                description=description,
+                                source=source,
+                                posted_date=date_posted,
+                            )
+                            found_new.append(jp)
+                        except Exception as e:
+                            self.stderr.write(f"Failed to write in db {link}: {e}")
 
                     # не спамим сайты
                     time.sleep(1.0)

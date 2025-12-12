@@ -33,7 +33,7 @@ def google_search(query, start=1, num=10, dateRestrict="d7"):
         "sort": "date",
         "filter": "1",
         "excludeTerms": '"Senior Data"',
-        #"excludeTerms": '"Senior Analytics"',
+        # "excludeTerms": '"Senior Analytics"',
     }
     url = "https://www.googleapis.com/customsearch/v1?" + urlencode(params)
     headers = {"User-Agent": USER_AGENT}
@@ -92,7 +92,15 @@ def parse_lever(url):
     if script:
         script_dict = json.loads(script.text)
         title = script_dict["title"]
-        location = script_dict["jobLocation"]["address"]["addressLocality"]
+        temp_location = script_dict["jobLocation"]
+        if isinstance(temp_location, list):
+            location = []
+            for loc in temp_location:
+                location.append(loc["address"]["addressLocality"])
+            location = "/".join(location)
+        else:
+            location = temp_location["address"]["addressLocality"]
+
         description = script_dict["description"]
         date_posted = script_dict["datePosted"]
     return company, title, location, description, date_posted
