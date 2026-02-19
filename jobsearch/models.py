@@ -8,7 +8,8 @@ class JobPosting(models.Model):
     location = models.CharField(max_length=500, blank=True)
     posted_date = models.DateField(null=True, blank=True)
     description = models.TextField(blank=True)
-    scraped_at = models.DateTimeField(auto_now=True)
+    scraped_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     is_applied = models.BooleanField(default=False)
     apply_date = models.DateField(null=True, blank=True)
@@ -26,7 +27,8 @@ class BadJob(models.Model):
     location = models.CharField(max_length=500, blank=True)
     posted_date = models.DateField(null=True, blank=True)
     description = models.TextField(blank=True)
-    scraped_at = models.DateTimeField(auto_now=True)
+    scraped_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     source = models.CharField(max_length=200, blank=True)
 
