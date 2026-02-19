@@ -2,7 +2,9 @@ from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.utils.html import format_html
 
-from .models import BadJob, JobPosting
+from jobsearch.utils import move_company_to_bad
+
+from .models import BadCompany, BadJob, BadLocation, JobPosting
 
 
 @admin.action(description="Convert to Bad Jobs")
@@ -35,4 +37,23 @@ class JobPostingAdmin(admin.ModelAdmin):
 
 @admin.register(BadJob)
 class BadJobAdmin(admin.ModelAdmin):
-    list_display = ("url",)
+    list_display = ("title", "company", "location", "url")
+    search_fields = ("company", "url")
+
+
+@admin.register(BadLocation)
+class BadLocationAdmin(admin.ModelAdmin):
+    list_display = ("pattern",)
+    search_fields = ("pattern",)
+
+
+@admin.register(BadCompany)
+class BadCompanyAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change:
+            count = move_company_to_bad(obj.name)
+            self.message_user(request, f"Moved {count} job(s) from '{obj.name}' to Bad Jobs.")

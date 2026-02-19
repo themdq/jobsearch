@@ -4,7 +4,14 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from jobsearch.utils import google_search, parse_ashby, parse_greenhouse, parse_lever
+from jobsearch.utils import (
+    google_search,
+    is_allowed_location,
+    move_company_to_bad,
+    parse_ashby,
+    parse_greenhouse,
+    parse_lever,
+)
 
 GREENHOUSE_URL = "https://boards.greenhouse.io/acme/jobs/123456"
 LEVER_URL = "https://jobs.lever.co/acme/abc-123"
@@ -200,3 +207,117 @@ def test_google_search_raises_after_max_retries(httpx_mock, monkeypatch):
     with patch("time.sleep"):
         with pytest.raises(httpx.HTTPStatusError):
             google_search("test")
+
+
+# ---------------------------------------------------------------------------
+# move_company_to_bad
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# is_allowed_location
+# ---------------------------------------------------------------------------
+
+
+def test_allowed_location_remote():
+    assert is_allowed_location("Remote") is True
+
+
+def test_allowed_location_remote_us():
+    assert is_allowed_location("Remote (US Only)") is True
+
+
+def test_allowed_location_city_state():
+    assert is_allowed_location("New York, NY") is True
+
+
+def test_allowed_location_bare_city():
+    assert is_allowed_location("New York") is True
+
+
+def test_allowed_location_empty():
+    assert is_allowed_location("") is True
+
+
+def test_blocked_location_india():
+    assert is_allowed_location("India") is False
+
+
+def test_blocked_location_city_country():
+    assert is_allowed_location("Bangalore, India") is False
+
+
+def test_blocked_location_uk_city():
+    assert is_allowed_location("London") is False
+
+
+def test_blocked_location_london_uk():
+    assert is_allowed_location("London, UK") is False
+
+
+def test_blocked_location_emea():
+    assert is_allowed_location("Remote - EMEA") is False
+
+
+def test_blocked_location_germany():
+    assert is_allowed_location("Berlin, Germany") is False
+
+
+def test_blocked_location_canada():
+    assert is_allowed_location("Toronto") is False
+
+
+def test_extra_blocked_matches():
+    assert is_allowed_location("Warsaw", extra_blocked=frozenset({"Warsaw"})) is False
+
+
+def test_extra_blocked_no_match():
+    assert is_allowed_location("New York", extra_blocked=frozenset({"Warsaw"})) is True
+
+
+def test_extra_blocked_case_insensitive():
+    assert is_allowed_location("warsaw", extra_blocked=frozenset({"Warsaw"})) is False
+
+
+@pytest.mark.django_db
+def test_move_company_to_bad_moves_records():
+    from jobsearch.models import BadJob, JobPosting
+
+    JobPosting.objects.create(url="https://jobs.lever.co/acme/1", company="acme", title="DE 1")
+    JobPosting.objects.create(url="https://jobs.lever.co/acme/2", company="acme", title="DE 2")
+
+    move_company_to_bad("acme")
+
+    assert JobPosting.objects.filter(company="acme").count() == 0
+    assert BadJob.objects.filter(company="acme").count() == 2
+
+
+@pytest.mark.django_db
+def test_move_company_to_bad_idempotent():
+    from jobsearch.models import BadJob, JobPosting
+
+    JobPosting.objects.create(url="https://jobs.lever.co/acme/1", company="acme", title="DE 1")
+
+    move_company_to_bad("acme")
+    move_company_to_bad("acme")  # second call: no jobs left, no crash
+
+    assert BadJob.objects.filter(company="acme").count() == 1
+
+
+@pytest.mark.django_db
+def test_move_company_to_bad_returns_count():
+    from jobsearch.models import JobPosting
+
+    JobPosting.objects.create(url="https://jobs.lever.co/acme/1", company="acme", title="DE 1")
+    JobPosting.objects.create(url="https://jobs.lever.co/acme/2", company="acme", title="DE 2")
+    JobPosting.objects.create(url="https://jobs.lever.co/other/1", company="other", title="Other")
+
+    count = move_company_to_bad("acme")
+
+    assert count == 2
+
+
+@pytest.mark.django_db
+def test_move_company_to_bad_no_match():
+    count = move_company_to_bad("nonexistent")
+    assert count == 0

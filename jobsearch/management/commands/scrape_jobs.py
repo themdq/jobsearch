@@ -3,8 +3,14 @@ import traceback
 
 from django.core.management.base import BaseCommand
 
-from jobsearch.models import BadJob, JobPosting
-from jobsearch.utils import google_search, parse_ashby, parse_greenhouse, parse_lever
+from jobsearch.models import BadCompany, BadJob, BadLocation, JobPosting
+from jobsearch.utils import (
+    google_search,
+    is_allowed_location,
+    parse_ashby,
+    parse_greenhouse,
+    parse_lever,
+)
 
 QUERY = '"data engineer"'
 # QUERY = '"analytics engineer"'
@@ -18,6 +24,8 @@ class Command(BaseCommand):
 
         found_new = []
         start = 1
+        bad_companies = set(BadCompany.objects.values_list("name", flat=True))
+        bad_locations = frozenset(BadLocation.objects.values_list("pattern", flat=True))
 
         try:
             while True:
@@ -61,9 +69,19 @@ class Command(BaseCommand):
                         self.stderr.write(f"Failed fetch {link}: {e}")
                         continue
 
-                    if str(location) in ["India"]:
-                        BadJob.objects.create(url=link)
-
+                    location_blocked = not is_allowed_location(str(location), bad_locations)
+                    if location_blocked or company in bad_companies:
+                        BadJob.objects.get_or_create(
+                            url=link,
+                            defaults={
+                                "company": company,
+                                "title": title or res.get("title") or "",
+                                "location": location,
+                                "description": description,
+                                "source": source,
+                                "posted_date": date_posted,
+                            },
+                        )
                     else:
                         try:
                             jp = JobPosting.objects.create(

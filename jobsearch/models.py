@@ -34,6 +34,24 @@ class BadJob(models.Model):
         return f"{self.title or self.url}"
 
 
+class BadCompany(models.Model):
+    name = models.CharField(max_length=500, unique=True)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class BadLocation(models.Model):
+    pattern = models.CharField(
+        max_length=500,
+        unique=True,
+        help_text="Case-insensitive substring to block (e.g. 'London', 'EMEA')",
+    )
+
+    def __str__(self) -> str:
+        return self.pattern
+
+
 # class Alert(models.Model):
 #     """
 #     Настраиваемые алерты: можно создать правило, например

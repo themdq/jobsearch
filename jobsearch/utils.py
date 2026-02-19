@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import re
 import time
 from urllib.parse import urlencode
 
@@ -10,6 +11,64 @@ from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
 USER_AGENT = "job-scraper-bot/1.0"
+
+_BLOCKED_LOCATIONS = re.compile(
+    r"\b("
+    # Countries
+    r"India|Pakistan|Bangladesh|Sri Lanka|"
+    r"UK|United Kingdom|England|Scotland|Wales|"
+    r"Canada|Australia|New Zealand|Ireland|"
+    r"Germany|France|Netherlands|Spain|Italy|Sweden|Denmark|Norway|Finland|"
+    r"Poland|Switzerland|Austria|Belgium|Portugal|Romania|Czech|Hungary|"
+    r"Israel|Singapore|Japan|China|South Korea|Vietnam|Philippines|"
+    r"Brazil|Mexico|Argentina|Colombia|Chile|Peru|"
+    r"UAE|Dubai|Saudi Arabia|Nigeria|Kenya|South Africa|Egypt|"
+    # Regional codes
+    r"Europe|EMEA|APAC|LATAM|"
+    # Common international cities (appear without country on Lever/Ashby)
+    r"London|Berlin|Paris|Amsterdam|Toronto|Vancouver|Montreal|"
+    r"Dublin|Stockholm|Copenhagen|Zurich|Munich|Frankfurt|"
+    r"Sydney|Melbourne|Auckland|Tel Aviv|Mumbai|Bangalore|Bengaluru|"
+    r"Hyderabad|Delhi|Chennai|Pune|Kolkata|Gurgaon|Noida"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def is_allowed_location(location: str, extra_blocked: frozenset[str] = frozenset()) -> bool:
+    """Return True if location is not a known non-US/non-remote location.
+
+    extra_blocked: additional case-insensitive substrings loaded from BadLocation table.
+    """
+    if not location:
+        return True
+    if _BLOCKED_LOCATIONS.search(location):
+        return False
+    loc_lower = location.lower()
+    return not any(p.lower() in loc_lower for p in extra_blocked)
+
+
+def move_company_to_bad(company_name: str) -> int:
+    """Move all JobPosting records for company_name to BadJob. Returns count moved."""
+    from jobsearch.models import BadJob, JobPosting
+
+    jobs = JobPosting.objects.filter(company=company_name)
+    count = 0
+    for job in jobs:
+        BadJob.objects.get_or_create(
+            url=job.url,
+            defaults={
+                "company": job.company,
+                "title": job.title,
+                "location": job.location,
+                "posted_date": job.posted_date,
+                "description": job.description,
+                "source": job.source,
+            },
+        )
+        job.delete()
+        count += 1
+    return count
 
 _MAX_RETRIES = 3
 
