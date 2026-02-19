@@ -72,16 +72,6 @@ jobs:
         echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
         chmod 600 $HOME/.kube/config
 
-    - name: Update deployment image
-      run: |
-        kubectl set image deployment/django-app \
-          django=${{ env.IMAGE }} \
-          -n job-finder
-        
-        kubectl rollout status deployment/django-app -n job-finder --timeout=5m
-
-        kubectl set image cronjob/django-hourly-task django-command=${{ env.IMAGE }} -n job-finder
-
     - name: Run migrations
       run: |
         kubectl set image cronjob/django-migrate migrate=${{ env.IMAGE }} -n job-finder
@@ -93,7 +83,6 @@ jobs:
         kubectl wait --for=condition=complete job/django-migrate-${{ github.sha }} \
           -n job-finder --timeout=5m
 
-
     - name: Collect static files
       run: |
         kubectl set image cronjob/django-collectstatic collectstatic=${{ env.IMAGE }} -n job-finder
@@ -104,3 +93,13 @@ jobs:
 
         kubectl wait --for=condition=complete job/django-collectstatic-${{ github.sha }} \
           -n job-finder --timeout=5m
+
+    - name: Update deployment image
+      run: |
+        kubectl set image deployment/django-app \
+          django=${{ env.IMAGE }} \
+          -n job-finder
+
+        kubectl rollout status deployment/django-app -n job-finder --timeout=10m
+
+        kubectl set image cronjob/django-hourly-task django-command=${{ env.IMAGE }} -n job-finder
