@@ -13,7 +13,7 @@ QUERY = '"data engineer"'
 class Command(BaseCommand):
     help = "Scrape Google Custom Search results and save jobs into JobPosting table"
 
-    def handle(self, *args, **options):
+    def handle(self, *args: object, **options: object) -> None:
         self.stdout.write("Running static job scrape...")
 
         found_new = []
@@ -32,7 +32,7 @@ class Command(BaseCommand):
                     elif "ashbyhq" in link:
                         link = "/".join(link.split("/")[:5])
 
-                    # если уже есть — пропускаем
+                    # skip if already recorded
                     if (
                         JobPosting.objects.filter(url=link).exists()
                         or BadJob.objects.filter(url=link).exists()
@@ -79,10 +79,10 @@ class Command(BaseCommand):
                         except Exception as e:
                             self.stderr.write(f"Failed to write in db {link}: {e}")
 
-                    # не спамим сайты
+                    # rate-limit outbound requests
                     time.sleep(1.0)
 
-                # пагинация Google API
+                # advance Google API pagination
                 next_info = queries_meta.get("nextPage")
                 if next_info and isinstance(next_info, list):
                     start = next_info[0].get("startIndex")
@@ -96,7 +96,7 @@ class Command(BaseCommand):
             traceback.print_exc()
             return
 
-        # финальный вывод
+        # final summary
         self.stdout.write(f"Added {len(found_new)} new job postings.")
         if found_new:
             for jp in found_new:
