@@ -23,5 +23,23 @@ datasources:
       editable: true
 
 service:
-  type: NodePort
-  port: 80
+  type: ClusterIP
+  port: 3000
+
+grafana.ini:
+  server:
+    root_url: https://grafana.malashikh.in
+    serve_from_sub_path: false
+
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+  hosts:
+    - grafana.malashikh.in
+  path: /
+  pathType: Prefix
+  tls:
+    - hosts:
+        - grafana.malashikh.in

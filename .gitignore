@@ -21,3 +21,4 @@ variables.tf
 Makefile*
 *secrets.yaml
 .DS_Store
+CLAUDE.md
